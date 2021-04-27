@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 from pathlib import Path
 
@@ -9,14 +10,18 @@ from aiohttp.abc import StreamResponse, BaseRequest
 from aiohttp.web_exceptions import HTTPNotFound
 
 
+logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s', level=logging.INFO)
+
+
 async def archivate(request: BaseRequest) -> StreamResponse:
     archive_hash = request.match_info.get('archive_hash')
     root_photos_dir = 'test_photos'
 
     photos_dir_path = Path(root_photos_dir, archive_hash)
     if not os.path.exists(photos_dir_path):
+        logging.error(f'Photos archive "{archive_hash}" doesn\'t exist')
         raise HTTPNotFound(
-            body='Архив не существует или был удален',
+            body=f'Архив "{archive_hash}" не существует или был удален',
         )
 
     response = web.StreamResponse()
@@ -26,6 +31,8 @@ async def archivate(request: BaseRequest) -> StreamResponse:
     await response.prepare(request)
 
     cmd = ('zip', '-r', '-', archive_hash)
+
+    logging.info(f'Start archiving "{archive_hash}" folder')
 
     archiving = await asyncio.create_subprocess_exec(
         *cmd,
@@ -37,7 +44,10 @@ async def archivate(request: BaseRequest) -> StreamResponse:
     chunk_size_in_bytes = 200 * 2024
 
     while not archiving.stdout.at_eof():
+        logging.info('Sending archive chunk...')
         await response.write(await archiving.stdout.read(n=chunk_size_in_bytes))
+
+    logging.info(f'"{archive_hash}" folder successfully archived and sent')
 
     return response
 

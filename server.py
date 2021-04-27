@@ -1,15 +1,25 @@
 import asyncio
+import os
+from pathlib import Path
+
 from aiohttp import web
 import aiofiles
 
 from aiohttp.abc import StreamResponse, BaseRequest
+from aiohttp.web_exceptions import HTTPNotFound
 
 
 async def archivate(request: BaseRequest) -> StreamResponse:
-    response = web.StreamResponse()
-
     archive_hash = request.match_info.get('archive_hash')
     root_photos_dir = 'test_photos'
+
+    photos_dir_path = Path(root_photos_dir, archive_hash)
+    if not os.path.exists(photos_dir_path):
+        raise HTTPNotFound(
+            body='Архив не существует или был удален',
+        )
+
+    response = web.StreamResponse()
     archive_filename = 'archive.zip'
 
     response.headers['Content-Disposition'] = f'attachment; filename="{archive_filename}"'

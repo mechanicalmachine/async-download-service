@@ -20,7 +20,8 @@ async def archivate(request: BaseRequest) -> StreamResponse:
     archiving = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        stderr=asyncio.subprocess.PIPE,
+        cwd=root_photos_dir,
     )
 
     chunk_size_in_bytes = 200 * 2024

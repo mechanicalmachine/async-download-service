@@ -1,25 +1,24 @@
+import asyncio
 from aiohttp import web
 import aiofiles
 
+from aiohttp.abc import StreamResponse, BaseRequest
 
 
 async def archivate(request: BaseRequest) -> StreamResponse:
     response = web.StreamResponse()
 
-    response.headers['Content-Disposition'] = 'attachment; filename="archive.zip"'
+    archive_hash = request.match_info.get('archive_hash')
+    root_photos_dir = 'test_photos'
+    archive_filename = 'archive.zip'
 
+    response.headers['Content-Disposition'] = f'attachment; filename="{archive_filename}"'
     await response.prepare(request)
 
-    archive_hash = request.match_info.get('archive_hash')
-    archiving_dir_path = Path('test_photos', archive_hash)
-    # archiving_dir_path = 'test_photos'
+    cmd = ('zip', '-r', '-', archive_hash)
 
     archiving = await asyncio.create_subprocess_exec(
-        'zip',
-        '-r',  # recursively
-        '--base_dir cwd',
-        '-',  # send result to stdout
-        archiving_dir_path,
+        *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )

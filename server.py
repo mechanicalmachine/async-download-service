@@ -53,8 +53,8 @@ async def archivate(request: BaseRequest) -> StreamResponse:
     except asyncio.CancelledError:
         archiving.kill()
         logging.error("Download was interrupted")
-    # finally:
-    #     response.force_close()
+    finally:
+        response.force_close()
 
     return response
 

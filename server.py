@@ -21,7 +21,7 @@ async def archivate(request: BaseRequest) -> StreamResponse:
     if not os.path.exists(photos_dir_path):
         logging.error(f'Photos archive "{archive_hash}" doesn\'t exist')
         raise HTTPNotFound(
-            body=f'Архив "{archive_hash}" не существует или был удален',
+            reason=f'Архив "{archive_hash}" не существует или был удален',
         )
 
     response = web.StreamResponse()
@@ -43,11 +43,18 @@ async def archivate(request: BaseRequest) -> StreamResponse:
 
     chunk_size_in_bytes = 200 * 2024
 
-    while not archiving.stdout.at_eof():
-        logging.info('Sending archive chunk...')
-        await response.write(await archiving.stdout.read(n=chunk_size_in_bytes))
-
-    logging.info(f'"{archive_hash}" folder successfully archived and sent')
+    try:
+        while not archiving.stdout.at_eof():
+            logging.info('Sending archive chunk...')
+            await response.write(await archiving.stdout.read(n=chunk_size_in_bytes))
+            # await asyncio.sleep(1)
+            # raise IndexError
+        logging.info(f'"{archive_hash}" folder successfully archived and sent')
+    except asyncio.CancelledError:
+        archiving.kill()
+        logging.error("Download was interrupted")
+    # finally:
+    #     response.force_close()
 
     return response
 

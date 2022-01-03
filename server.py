@@ -47,13 +47,12 @@ async def archivate(request: BaseRequest) -> StreamResponse:
         while not archiving.stdout.at_eof():
             logging.info('Sending archive chunk...')
             await response.write(await archiving.stdout.read(n=chunk_size_in_bytes))
-            # await asyncio.sleep(1)
-            # raise IndexError
         logging.info(f'"{archive_hash}" folder successfully archived and sent')
-    except asyncio.CancelledError:
-        archiving.kill()
+    except (asyncio.CancelledError, Exception, BaseException):
         logging.error("Download was interrupted")
+        raise
     finally:
+        archiving.kill()
         response.force_close()
 
     return response

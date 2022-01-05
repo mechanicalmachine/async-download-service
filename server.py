@@ -53,6 +53,7 @@ async def archivate(request: BaseRequest) -> StreamResponse:
         raise
     finally:
         archiving.kill()
+        await archiving.communicate()
         response.force_close()
 
     return response

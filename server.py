@@ -10,7 +10,23 @@ from aiohttp.abc import StreamResponse, BaseRequest
 from aiohttp.web_exceptions import HTTPNotFound
 
 
-logging.basicConfig(format='%(levelname)-8s [%(asctime)s] %(message)s', level=logging.INFO)
+# TODO replace with settings
+is_logger_activated = True
+
+
+stream_logger = logging.getLogger(__name__)
+if is_logger_activated:
+    stream_handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(levelname)-8s [%(asctime)s] %(message)s')
+    stream_handler.setFormatter(formatter)
+
+    stream_logger.setLevel(logging.INFO)
+    stream_logger.addHandler(stream_handler)
+else:
+    null_handler = logging.NullHandler()
+    stream_logger.addHandler(null_handler)
+
+logger = logging.getLogger(__name__)
 
 
 async def archivate(request: BaseRequest) -> StreamResponse:
@@ -19,7 +35,7 @@ async def archivate(request: BaseRequest) -> StreamResponse:
 
     photos_dir_path = Path(root_photos_dir, archive_hash)
     if not os.path.exists(photos_dir_path):
-        logging.error(f'Photos archive "{archive_hash}" doesn\'t exist')
+        logger.error(f'Photos archive "{archive_hash}" doesn\'t exist')
         raise HTTPNotFound(
             reason=f'Архив "{archive_hash}" не существует или был удален',
         )
@@ -32,7 +48,7 @@ async def archivate(request: BaseRequest) -> StreamResponse:
 
     cmd = ('zip', '-r', '-', archive_hash)
 
-    logging.info(f'Start archiving "{archive_hash}" folder')
+    logger.info(f'Start archiving "{archive_hash}" folder')
 
     archiving = await asyncio.create_subprocess_exec(
         *cmd,
@@ -45,11 +61,12 @@ async def archivate(request: BaseRequest) -> StreamResponse:
 
     try:
         while not archiving.stdout.at_eof():
-            logging.info('Sending archive chunk...')
+            logger.info('Sending archive chunk...')
             await response.write(await archiving.stdout.read(n=chunk_size_in_bytes))
-        logging.info(f'"{archive_hash}" folder successfully archived and sent')
+            await asyncio.sleep(1)
+        logger.info(f'"{archive_hash}" folder successfully archived and sent')
     except (asyncio.CancelledError, Exception, BaseException):
-        logging.error("Download was interrupted")
+        logger.error("Download was interrupted")
         raise
     finally:
         archiving.kill()

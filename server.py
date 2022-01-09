@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 import os
@@ -83,9 +84,35 @@ async def handle_index_page(request):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    # включить или выключить логирование
+    parser.add_argument(
+        '-q', '--quiet',
+        action='store_true',
+        dest='quiet',
+        help='Suppress Output'
+    )
+    # указать путь к каталогу с фотографиями
+    parser.add_argument(
+        '-p', '--path',
+        type=Path,
+        default=Path(__file__).absolute().parent / "test_photos",
+        help='Images directory path'
+    )
+    # включить задержку ответа (см. шаг 11)
+    parser.add_argument(
+        '-d', '--delay',
+        action='store_true',
+        dest='delay',
+        help='Enable response delay'
+    )
+    args = parser.parse_args()
+
     app = web.Application()
-    app.add_routes([
-        web.get('/', handle_index_page),
-        web.get('/archive/{archive_hash}/', archivate),
-    ])
+    app.add_routes(
+        [
+            web.get('/', handle_index_page),
+            web.get('/archive/{archive_hash}/', archivate),
+        ]
+    )
     web.run_app(app)
